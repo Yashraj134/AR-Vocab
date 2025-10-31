@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,41 +8,161 @@ import {
   Alert,
   Dimensions,
   Animated,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
-import { LinearGradient } from 'expo-linear-gradient';
-import ARModelViewer from '../components/ARModelViewer';
-import vocabularyData from '../../assets/ar/vocabulary-data.json';
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Audio } from "expo-av";
+import { LinearGradient } from "expo-linear-gradient";
+import ARModelViewer from "../components/ARModelViewer";
+import * as FileSystem from "expo-file-system";
+
+// Default vocabulary data structure
+const defaultVocabularyData: VocabularyData = {
+  categories: [],
+};
 
 interface ARLearningScreenProps {
   navigation: any;
   route: {
     params: {
-      categoryId: string;
+      category: string; // Changed from categoryId to match the parameter name in CategorySelectionScreen
     };
   };
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
-export default function ARLearningScreen({ navigation, route }: ARLearningScreenProps) {
-  const { categoryId } = route.params;
+interface VocabularyItem {
+  id: string;
+  word: string;
+  emoji: string;
+  pronunciation: string;
+  phonetic: string;
+  modelPath: string;
+  soundPath: string;
+  textureColor: string;
+  scale: [number, number, number];
+  position: [number, number, number];
+  rotation: [number, number, number];
+  animations: string[];
+  difficulty: "easy" | "medium" | "hard";
+  description: string;
+}
+
+interface VocabularyCategory {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string[];
+  description: string;
+  items: VocabularyItem[];
+}
+
+interface VocabularyData {
+  categories: VocabularyCategory[];
+}
+
+export default function ARLearningScreen({
+  navigation,
+  route,
+}: ARLearningScreenProps) {
+  const { category: categoryId } = route.params; // Rename the parameter to match our usage
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showSparkle, setShowSparkle] = useState(false);
-  
+  const [vocabularyData, setVocabularyData] = useState<VocabularyData>(
+    defaultVocabularyData
+  );
+
   // Animation values for Figma-based UI
   const floatingAnimation = useRef(new Animated.Value(0)).current;
   const sparkleAnimation = useRef(new Animated.Value(0)).current;
   const gridOpacity = useRef(new Animated.Value(0.3)).current;
 
-  const categoryData = vocabularyData.categories.find(
-    cat => cat.id === categoryId
+  useEffect(() => {
+    loadVocabularyData();
+  }, []);
+
+  const loadVocabularyData = async () => {
+    try {
+      // Load the vocabulary data from the bundled asset
+      const data = require("../../assets/ar/vocabulary-data.json");
+      console.log("Loaded vocabulary data:", JSON.stringify(data, null, 2));
+      if (!data || !data.categories) {
+        throw new Error("Invalid vocabulary data structure");
+      }
+      setVocabularyData(data);
+    } catch (error) {
+      console.error("Error loading vocabulary data:", error);
+      Alert.alert("Error", "Failed to load vocabulary data. Please try again.");
+    }
+  };
+
+  // Debug category matching
+  console.log("Detailed Debug Info:");
+  console.log("1. Received categoryId:", categoryId);
+  console.log("2. Category ID type:", typeof categoryId);
+
+  // Safety check for categoryId
+  if (!categoryId) {
+    console.error("Category ID is undefined or null");
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <View style={styles.backButtonContainer}>
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </View>
+          </TouchableOpacity>
+          <View style={styles.errorContent}>
+            <Text style={styles.errorText}>Invalid category parameter</Text>
+            <Text style={styles.errorSubtext}>
+              Please select a category from the menu
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  console.log(
+    "3. Available categories:",
+    JSON.stringify(
+      vocabularyData.categories.map((cat: VocabularyCategory) => ({
+        id: cat.id,
+        type: typeof cat.id,
+        items: cat.items?.length || 0,
+      })),
+      null,
+      2
+    )
   );
+
+  const categoryData = vocabularyData.categories.find(
+    (cat: VocabularyCategory) =>
+      cat.id && categoryId && cat.id.toLowerCase() === categoryId.toLowerCase()
+  );
+
+  console.log(
+    "4. Found category data:",
+    categoryData
+      ? {
+          id: categoryData.id,
+          name: categoryData.name,
+          itemCount: categoryData.items?.length,
+        }
+      : "No matching category"
+  );
+
   const items = categoryData?.items || [];
+  console.log("5. Items in category:", items.length);
+
   const currentItem = items[currentItemIndex];
+  console.log("Current item:", currentItem);
 
   useEffect(() => {
     // Start floating animation
@@ -96,23 +216,23 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
 
   const playSound = async () => {
     if (!currentItem?.soundPath || isPlaying) return;
-    
+
     try {
       setIsPlaying(true);
       const { sound } = await Audio.Sound.createAsync(
-        require('../../assets/audio/apple.mp3') // Fallback audio
+        require("../../assets/audio/apple.mp3") // Fallback audio
       );
       setSound(sound);
       await sound.playAsync();
       triggerSparkle();
-      
+
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           setIsPlaying(false);
         }
       });
     } catch (error) {
-      console.error('Error playing sound:', error);
+      console.error("Error playing sound:", error);
       setIsPlaying(false);
     }
   };
@@ -122,9 +242,9 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
       setCurrentItemIndex(currentItemIndex + 1);
     } else {
       Alert.alert(
-        'Congratulations!',
-        'You have completed all words in this category!',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        "Congratulations!",
+        "You have completed all words in this category!",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
       );
     }
   };
@@ -146,7 +266,22 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
   if (!currentItem) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text>No items found for this category</Text>
+        <View style={styles.errorContainer}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <View style={styles.backButtonContainer}>
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </View>
+          </TouchableOpacity>
+          <View style={styles.errorContent}>
+            <Text style={styles.errorText}>
+              No items found for category: {categoryId}
+            </Text>
+            <Text style={styles.errorSubtext}>Please try another category</Text>
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -166,17 +301,29 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
     <View style={styles.container}>
       {/* Camera Background Simulation */}
       <LinearGradient
-        colors={['#1a1a2e', '#16213e', '#0f4c75']}
+        colors={["#1F2937", "#374151", "#4B5563"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={styles.backgroundGradient}
-      />
-      
+      >
+        {/* Gradient Orbs */}
+        <View style={styles.orbsContainer}>
+          <Animated.View style={[styles.orb, styles.blueOrb]} />
+          <Animated.View style={[styles.orb, styles.purpleOrb]} />
+          <Animated.View style={[styles.orb, styles.greenOrb]} />
+        </View>
+      </LinearGradient>
+
       {/* AR Grid Overlay */}
       <Animated.View style={[styles.gridOverlay, { opacity: gridOpacity }]}>
-        {Array.from({ length: 12 }).map((_, i) => (
-          <View key={`h-${i}`} style={[styles.gridLine, { top: i * 60 }]} />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <View key={`h-${i}`} style={[styles.gridLine, { top: i * 40 }]} />
         ))}
-        {Array.from({ length: 6 }).map((_, i) => (
-          <View key={`v-${i}`} style={[styles.gridLineVertical, { left: i * 70 }]} />
+        {Array.from({ length: 20 }).map((_, i) => (
+          <View
+            key={`v-${i}`}
+            style={[styles.gridLineVertical, { left: i * 40 }]}
+          />
         ))}
       </Animated.View>
 
@@ -191,67 +338,54 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
               <Ionicons name="arrow-back" size={24} color="white" />
             </View>
           </TouchableOpacity>
-          
+
           <View style={styles.headerInfo}>
             <Text style={styles.headerTitle}>AR Learning</Text>
             <Text style={styles.headerSubtitle}>
               {currentItemIndex + 1} of {items.length}
             </Text>
           </View>
-          
+
           <View style={styles.headerSpacer} />
         </View>
       </SafeAreaView>
 
       {/* AR View Container */}
       <View style={styles.arContainer}>
-        <ARModelViewer
-          item={{
-            ...currentItem,
-            scale: currentItem.scale as [number, number, number],
-            position: currentItem.position as [number, number, number],
-            rotation: currentItem.rotation as [number, number, number],
-            difficulty: currentItem.difficulty as 'easy' | 'medium' | 'hard'
-          }}
-          onModelLoaded={() => console.log('Model loaded:', currentItem.word)}
-          onModelTapped={playSound}
-        />
-        
-        {/* 3D Object Display Area with AR Effects */}
-        <View style={styles.objectDisplayArea}>
-          {showSparkle && (
-            <Animated.View
-              style={[
-                styles.sparkleContainer,
-                {
-                  transform: [
-                    {
-                      scale: sparkleAnimation.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.5, 2],
-                      }),
-                    },
-                  ],
-                  opacity: sparkleAnimation,
-                },
-              ]}
-            >
-              <Ionicons name="star" size={100} color="#FFD700" />
-            </Animated.View>
-          )}
-          
-          <View style={styles.objectFrame}>
-            {/* AR Corner Markers */}
-            <View style={[styles.arMarker, styles.arMarkerTopLeft]} />
-            <View style={[styles.arMarker, styles.arMarkerTopRight]} />
-            <View style={[styles.arMarker, styles.arMarkerBottomLeft]} />
-            <View style={[styles.arMarker, styles.arMarkerBottomRight]} />
-            
-            <Animated.View style={[styles.emojiContainer, floatingTransform]}>
-              <Text style={styles.emoji}>{currentItem.emoji}</Text>
-            </Animated.View>
-          </View>
+        <View style={styles.arViewerContainer}>
+          <ARModelViewer
+            item={{
+              ...currentItem,
+              scale: currentItem.scale as [number, number, number],
+              position: currentItem.position as [number, number, number],
+              rotation: currentItem.rotation as [number, number, number],
+              difficulty: currentItem.difficulty as "easy" | "medium" | "hard",
+            }}
+            onModelLoaded={() => console.log("Model loaded:", currentItem.word)}
+            onModelTapped={playSound}
+          />
         </View>
+
+        {showSparkle && (
+          <Animated.View
+            style={[
+              styles.sparkleContainer,
+              {
+                transform: [
+                  {
+                    scale: sparkleAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.5, 2],
+                    }),
+                  },
+                ],
+                opacity: sparkleAnimation,
+              },
+            ]}
+          >
+            <Ionicons name="star" size={100} color="#FFD700" />
+          </Animated.View>
+        )}
       </View>
 
       {/* Word Info Card */}
@@ -259,7 +393,9 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
         <View style={styles.wordInfo}>
           <Text style={styles.instructionText}>Say this word:</Text>
           <Text style={styles.wordText}>{currentItem.word}</Text>
-          <Text style={styles.pronunciationText}>{currentItem.pronunciation}</Text>
+          <Text style={styles.pronunciationText}>
+            {currentItem.pronunciation}
+          </Text>
         </View>
 
         {/* Control Buttons */}
@@ -270,7 +406,7 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
             disabled={isPlaying}
           >
             <LinearGradient
-              colors={['#667eea', '#764ba2']}
+              colors={["#667eea", "#764ba2"]}
               style={styles.buttonGradient}
             >
               <Ionicons
@@ -282,12 +418,9 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleNext}
-            style={styles.controlButton}
-          >
+          <TouchableOpacity onPress={handleNext} style={styles.controlButton}>
             <LinearGradient
-              colors={['#11998e', '#38ef7d']}
+              colors={["#11998e", "#38ef7d"]}
               style={styles.buttonGradient}
             >
               <Ionicons name="play-skip-forward" size={24} color="white" />
@@ -300,7 +433,7 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
             style={styles.controlButton}
           >
             <LinearGradient
-              colors={['#bdc3c7', '#95a5a6']}
+              colors={["#bdc3c7", "#95a5a6"]}
               style={styles.buttonGradient}
             >
               <Ionicons name="close" size={24} color="white" />
@@ -329,104 +462,189 @@ export default function ARLearningScreen({ navigation, route }: ARLearningScreen
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#1F2937",
+  },
+  errorContainer: {
+    flex: 1,
+    padding: 20,
+    alignItems: "flex-start",
+  },
+  errorContent: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  errorSubtext: {
+    color: "rgba(255, 255, 255, 0.7)",
+    fontSize: 14,
+    textAlign: "center",
   },
   backgroundGradient: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 0,
+    opacity: 0.95,
+  },
+  orbsContainer: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.2,
+  },
+  orb: {
+    position: "absolute",
+    borderRadius: 999,
+  },
+  blueOrb: {
+    top: 40,
+    left: 40,
+    width: 128,
+    height: 128,
+    backgroundColor: "#3B82F6",
+    transform: [{ scale: 2 }],
+    opacity: 0.6,
+  },
+  purpleOrb: {
+    bottom: 80,
+    right: 40,
+    width: 160,
+    height: 160,
+    backgroundColor: "#8B5CF6",
+    transform: [{ scale: 2 }],
+    opacity: 0.6,
+  },
+  greenOrb: {
+    top: "50%",
+    left: "50%",
+    width: 256,
+    height: 256,
+    backgroundColor: "#10B981",
+    transform: [{ scale: 2 }, { translateX: -128 }, { translateY: -128 }],
+    opacity: 0.3,
   },
   gridOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
+    opacity: 0.1,
   },
   gridLine: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: 'rgba(0, 255, 255, 0.3)',
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   gridLineVertical: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     bottom: 0,
     width: 1,
-    backgroundColor: 'rgba(0, 255, 255, 0.3)',
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   safeArea: {
-    flex: 1,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 5,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     zIndex: 10,
   },
   backButton: {
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: "hidden",
   },
   backButtonContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     padding: 12,
-    borderRadius: 25,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   headerInfo: {
-    flex: 1,
-    marginHorizontal: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 8,
   },
   headerSubtitle: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: "rgba(255, 255, 255, 0.8)",
     fontSize: 14,
-    marginTop: 2,
+    fontWeight: "500",
   },
   headerSpacer: {
     width: 50,
   },
   arContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 2,
+    marginTop: 60,
+    marginBottom: 200,
+    backgroundColor: "transparent",
   },
-  arViewer: {
-    ...StyleSheet.absoluteFillObject,
+  arViewerContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "transparent",
+    overflow: "hidden",
   },
   objectDisplayArea: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   sparkleContainer: {
-    position: 'absolute',
+    position: "absolute",
     zIndex: 10,
   },
   objectFrame: {
     width: 200,
     height: 200,
     borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    position: 'relative',
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    position: "relative",
   },
   arMarker: {
-    position: 'absolute',
+    position: "absolute",
     width: 24,
     height: 24,
-    borderColor: '#00ffff',
+    borderColor: "#00ffff",
   },
   arMarkerTopLeft: {
     top: 8,
@@ -453,76 +671,93 @@ const styles = StyleSheet.create({
     borderRightWidth: 4,
   },
   emojiContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   emoji: {
     fontSize: 80,
   },
   wordInfoCard: {
     marginHorizontal: 20,
-    marginBottom: 40,
+    marginBottom: 30,
     borderRadius: 30,
-    paddingVertical: 30,
-    paddingHorizontal: 20,
+    paddingVertical: 24,
+    paddingHorizontal: 24,
     zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 24,
+    elevation: 20,
   },
   wordInfo: {
-    alignItems: 'center',
-    marginBottom: 30,
+    alignItems: "center",
+    marginBottom: 24,
   },
   instructionText: {
-    color: 'rgba(0, 0, 0, 0.6)',
+    color: "rgba(0, 0, 0, 0.5)",
     fontSize: 14,
-    marginBottom: 5,
+    marginBottom: 8,
+    fontWeight: "500",
   },
   wordText: {
-    color: '#667eea',
+    color: "#7C3AED",
     fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontWeight: "bold",
+    marginBottom: 8,
+    letterSpacing: 0.5,
   },
   pronunciationText: {
-    color: 'rgba(0, 0, 0, 0.7)',
+    color: "rgba(0, 0, 0, 0.6)",
     fontSize: 16,
+    fontWeight: "500",
   },
   controls: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   controlButton: {
     flex: 1,
     height: 64,
-    borderRadius: 20,
-    overflow: 'hidden',
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
   },
   buttonGradient: {
     flex: 1,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
   },
   buttonText: {
-    color: 'white',
+    color: "white",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   progressContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     gap: 8,
   },
   progressDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
   },
   progressDotActive: {
     width: 32,
-    backgroundColor: '#667eea',
+    backgroundColor: "#7C3AED",
+    transform: [{ scaleY: 1.1 }],
   },
 });

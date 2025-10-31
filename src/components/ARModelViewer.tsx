@@ -1,8 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Text, Platform, Alert, TouchableOpacity, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { VocabularyItem } from '../types/vocabulary';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Text,
+  Platform,
+  Alert,
+  TouchableOpacity,
+  Animated,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { VocabularyItem } from "../types/vocabulary";
 
 // Real ARCore implementation - Install: npm install react-native-ar
 // import { ARSceneView, ARModel, ARNode, ARPlane } from 'react-native-ar';
@@ -15,7 +23,7 @@ interface ARModelViewerProps {
 
 /**
  * ARModelViewer Component for loading .obj files in ARCore
- * 
+ *
  * This is a REAL implementation for loading .obj files with react-native-ar
  * To use: npm install react-native-ar
  */
@@ -26,34 +34,34 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
 }) => {
   const [arEnabled, setArEnabled] = useState(false);
   const [modelLoaded, setModelLoaded] = useState(false);
-  
+
   useEffect(() => {
     checkARSupport();
   }, []);
 
   const checkARSupport = async () => {
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       // Check for ARCore support
       try {
         // In real implementation:
         // const isSupported = await ARSceneView.isARCoreSupported();
         // setArEnabled(isSupported);
-        
+
         // For now, simulate AR support detection
         setArEnabled(true);
-        console.log('ARCore support detected');
+        console.log("ARCore support detected");
       } catch (error) {
-        Alert.alert('AR Not Supported', 'This device does not support ARCore');
+        Alert.alert("AR Not Supported", "This device does not support ARCore");
       }
-    } else if (Platform.OS === 'ios') {
+    } else if (Platform.OS === "ios") {
       // Check for ARKit support
       try {
         // const isSupported = await ARSceneView.isARKitSupported();
         // setArEnabled(isSupported);
         setArEnabled(true);
-        console.log('ARKit support detected');
+        console.log("ARKit support detected");
       } catch (error) {
-        Alert.alert('AR Not Supported', 'This device does not support ARKit');
+        Alert.alert("AR Not Supported", "This device does not support ARKit");
       }
     }
   };
@@ -73,8 +81,61 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
   if (arEnabled) {
     return (
       <View style={styles.arScene}>
-        {/* 
-        Real implementation with react-native-ar:
+        {/* AR Scene Background with Grid */}
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: "#1F2937",
+              opacity: 0.95,
+            },
+          ]}
+        >
+          {/* Gradient Orbs */}
+          <View style={[StyleSheet.absoluteFill, { opacity: 0.2 }]}>
+            <View
+              style={{
+                position: "absolute",
+                top: 40,
+                left: 40,
+                width: 128,
+                height: 128,
+                borderRadius: 64,
+                backgroundColor: "#3B82F6",
+                transform: [{ scale: 2 }],
+                opacity: 0.6,
+              }}
+            />
+            <View
+              style={{
+                position: "absolute",
+                bottom: 80,
+                right: 40,
+                width: 160,
+                height: 160,
+                borderRadius: 80,
+                backgroundColor: "#8B5CF6",
+                transform: [{ scale: 2 }],
+                opacity: 0.6,
+              }}
+            />
+          </View>
+
+          {/* Grid Pattern */}
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                opacity: 0.1,
+                borderWidth: 1,
+                borderColor: "#ffffff",
+                borderStyle: "dashed",
+              },
+            ]}
+          />
+        </View>
+
+        {/* Real implementation with react-native-ar:
         
         <ARSceneView
           style={styles.arScene}
@@ -116,10 +177,10 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
           />
         </ARSceneView>
         */}
-        
+
         {/* Development simulation - remove when react-native-ar is installed */}
-        <ARSimulation 
-          item={item} 
+        <ARSimulation
+          item={item}
           onTap={handleModelTap}
           onLoad={handleModelLoad}
         />
@@ -131,7 +192,12 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
   return (
     <View style={styles.arScene}>
       <View style={styles.simulationContainer}>
-        <View style={[styles.modelPlaceholder, { backgroundColor: item.textureColor }]}>
+        <View
+          style={[
+            styles.modelPlaceholder,
+            { backgroundColor: item.textureColor },
+          ]}
+        >
           <Text style={styles.modelText}>{item.emoji}</Text>
           <Text style={styles.pathText}>AR Not Available</Text>
         </View>
@@ -212,7 +278,7 @@ const ARSimulation: React.FC<{
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: ["0deg", "360deg"],
   });
 
   return (
@@ -231,16 +297,16 @@ const ARSimulation: React.FC<{
           style={[
             styles.arObject,
             {
-              transform: [
-                { translateY },
-                { rotate },
-                { scale: scaleAnim },
-              ],
+              transform: [{ translateY }, { rotate }, { scale: scaleAnim }],
             },
           ]}
         >
           <LinearGradient
-            colors={item.textureColor ? [item.textureColor, '#ffffff'] : ['#4F46E5', '#7C3AED']}
+            colors={
+              item.textureColor
+                ? [item.textureColor, "#ffffff"]
+                : ["#4F46E5", "#7C3AED"]
+            }
             style={styles.objectGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -252,7 +318,9 @@ const ARSimulation: React.FC<{
 
       {/* AR Instructions */}
       <View style={styles.arInstructions}>
-        <Text style={styles.instructionText}>Tap the 3D object to hear pronunciation</Text>
+        <Text style={styles.instructionText}>
+          Tap the 3D object to hear pronunciation
+        </Text>
         <Text style={styles.instructionSubtext}>OBJ: {item.modelPath}</Text>
         <View style={styles.instructionIndicator}>
           <Ionicons name="hand-left" size={24} color="#ffffff" />
@@ -275,7 +343,7 @@ export class ObjModelLoader {
       // For now, we'll assume .obj files exist
       return true;
     } catch (error) {
-      console.warn('OBJ file validation failed:', error);
+      console.warn("OBJ file validation failed:", error);
       return false;
     }
   }
@@ -290,13 +358,13 @@ export class ObjModelLoader {
     }
 
     // Check for accompanying .mtl file
-    const mtlPath = modelPath.replace('.obj', '.mtl');
+    const mtlPath = modelPath.replace(".obj", ".mtl");
     const mtlExists = await this.validateObjFile(mtlPath);
 
     return {
       objPath: modelPath,
       mtlPath: mtlExists ? mtlPath : null,
-      hasTextures: mtlExists
+      hasTextures: mtlExists,
     };
   }
 
@@ -306,29 +374,29 @@ export class ObjModelLoader {
   static getOptimizedModelSettings(item: VocabularyItem) {
     return {
       // Scale based on category for better AR experience
-      scale: item.scale.map(s => s * 0.8), // Slightly smaller for mobile
-      
+      scale: item.scale.map((s) => s * 0.8), // Slightly smaller for mobile
+
       // Position adjustments for better visibility
       position: [
         item.position[0],
         item.position[1] - 0.1, // Slightly lower
-        item.position[2]
+        item.position[2],
       ],
-      
+
       // Material settings optimized for mobile
       materials: {
         diffuse: item.textureColor,
-        metallic: 0.0,  // Less metallic for better performance
+        metallic: 0.0, // Less metallic for better performance
         roughness: 1.0, // More rough for simpler lighting
-        transparency: 1.0
+        transparency: 1.0,
       },
-      
+
       // Animation settings
       animations: {
         enabled: item.animations.length > 0,
-        defaultAnimation: item.animations[0] || 'idle',
-        loop: true
-      }
+        defaultAnimation: item.animations[0] || "idle",
+        loop: true,
+      },
     };
   }
 }
@@ -339,50 +407,55 @@ export class ObjModelLoader {
 export const ARCoreConfig = {
   // Session configuration
   session: {
-    configuration: 'ARWorldTrackingConfiguration',
-    planeDetection: 'horizontal',
+    configuration: "ARWorldTrackingConfiguration",
+    planeDetection: "horizontal",
     lightEstimation: true,
-    worldAlignment: 'gravity'
+    worldAlignment: "gravity",
   },
-  
+
   // Model loading settings
   modelLoading: {
     timeout: 10000, // 10 seconds
     retryAttempts: 3,
-    cacheEnabled: true
+    cacheEnabled: true,
   },
-  
+
   // Performance settings for mobile devices
   performance: {
-    maxTriangles: 2000,      // Limit polygon count
-    maxTextureSize: 512,     // Limit texture resolution
-    enableLOD: true,         // Level of detail
-    enableOcclusion: false   // Disable for better performance
-  }
+    maxTriangles: 2000, // Limit polygon count
+    maxTextureSize: 512, // Limit texture resolution
+    enableLOD: true, // Level of detail
+    enableOcclusion: false, // Disable for better performance
+  },
 };
 
 const styles = StyleSheet.create({
   arScene: {
     flex: 1,
-    backgroundColor: 'transparent',
+    width: "100%",
+    height: "100%",
+    backgroundColor: "transparent",
   },
   simulationContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
   },
   modelPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    width: 180,
+    height: 180,
+    borderRadius: 24, // More squared like Figma design
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderWidth: 4,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
   },
   modelText: {
     fontSize: 48,
@@ -390,32 +463,34 @@ const styles = StyleSheet.create({
   },
   pathText: {
     fontSize: 10,
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: 'bold',
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "bold",
   },
   // AR Specific Styles
   arContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    borderRadius: 20,
-    overflow: 'hidden',
-    position: 'relative',
+    backgroundColor: "transparent",
+    borderRadius: 24,
+    overflow: "hidden",
+    position: "relative",
   },
   planeIndicators: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     zIndex: 1,
+    opacity: 0.1,
+    backgroundColor: "transparent",
   },
   cornerIndicator: {
-    position: 'absolute',
-    width: 20,
-    height: 20,
-    borderColor: '#ffffff',
-    borderWidth: 2,
+    position: "absolute",
+    width: 24,
+    height: 24,
+    borderColor: "#22D3EE", // Cyan color from Figma design
+    borderWidth: 4,
   },
   topLeft: {
     top: 20,
@@ -443,57 +518,74 @@ const styles = StyleSheet.create({
   },
   arObjectContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 2,
+    backgroundColor: "transparent",
   },
   arObject: {
-    width: 120,
-    height: 120,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 180,
+    height: 180,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 24,
+    borderWidth: 4,
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
   objectGradient: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 12,
+    width: "100%",
+    height: "100%",
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 16,
   },
   objectEmoji: {
     fontSize: 48,
   },
   arInstructions: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    alignItems: 'center',
+    position: "absolute",
+    bottom: 24,
+    left: 24,
+    right: 24,
+    alignItems: "center",
     zIndex: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   instructionText: {
-    fontSize: 12,
-    color: '#ffffff',
-    marginBottom: 4,
-    textAlign: 'center',
-    fontWeight: '600',
+    fontSize: 14,
+    color: "#ffffff",
+    marginBottom: 8,
+    textAlign: "center",
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
   instructionSubtext: {
-    fontSize: 10,
-    color: '#ffffff',
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 12,
+    color: "#ffffff",
+    marginBottom: 12,
+    textAlign: "center",
     opacity: 0.8,
+    letterSpacing: 0.25,
   },
   instructionIndicator: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
-    padding: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 24,
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
 });
 
